@@ -24,18 +24,14 @@
 TODO
 
 ## 使用方法
-### Windows 用户
-直接双击 gofile-cli.exe 运行。
+[下载](https://github.com/songquanpeng/gofile-cli/releases/latest)可执行文件后，将其放到在 PATH 环境变量里的某个目录下。
 
-### macOS 用户
-1. 给执行权限：`chmod u+x gofile-cli-macos`；
-2. 之后直接双击运行 gofile-cli-macos 或在终端中运行都可。
-
-### Linux 用户
-同上，区别在于文件名换成 `gofile-cli`。
+具体使用方法 TODO。
 
 ## 打包流程
 ```bash
+git clone https://github.com/songquanpeng/gofile-cli
+cd gofile-cli
 go mod download
 go build -ldflags "-s -w -extldflags '-static'" -o gofile-cli.exe
 ```
