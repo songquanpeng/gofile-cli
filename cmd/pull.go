@@ -16,7 +16,7 @@ var pullCmd = &cobra.Command{
 	Long:  `Pull one or multi files by id`,
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		id, _ := strconv.ParseInt(args[0], 10, 64)
+		id, _ := strconv.ParseUint(args[0], 10, 64)
 		common.P2PRecvFileHandler(uint64(id))
 	},
 }

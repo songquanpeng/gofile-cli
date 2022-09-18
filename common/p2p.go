@@ -2,13 +2,12 @@ package common
 
 import (
 	"encoding/binary"
+	"errors"
 	"github.com/spf13/viper"
 	"io/ioutil"
 	"log"
-	"math/rand"
 	"net"
 	"net/url"
-	"os"
 	"strconv"
 	"strings"
 )
@@ -18,31 +17,41 @@ var serverPort = 9377
 var sendPort = 9378
 var recvPort = 9379
 
+var OkayByte uint8 = 0
+var ErrorByte uint8 = 1
+
 // Reference: http://qjpcpu.github.io/blog/2018/01/26/p2pzhi-udpda-dong/
 
 func getPeerAddr(localAddr *net.UDPAddr, serverAddr *net.UDPAddr, id uint64) (peerAddr *net.UDPAddr, err error) {
 	if err != nil {
 		return
 	}
-	if id == 0 {
-		id = rand.Uint64()
-		if id == 0 {
-			id = 1
-		}
-		if os.Getenv("MODE") == "debug" {
-			id = 1
-		}
-		log.Printf("Your id: %d", id)
-	}
 	buffer := make([]byte, 8)
-	binary.BigEndian.PutUint64(buffer, id)
-	log.Println("Register information with server...")
+	binary.LittleEndian.PutUint64(buffer, id)
+	if id == 0 {
+		log.Println("Request id from server...")
+	} else {
+		log.Println("Register id with server...")
+	}
 	conn, err := net.DialUDP("udp", localAddr, serverAddr)
 	if _, err = conn.Write(buffer); err != nil {
 		return
 	}
-	data := make([]byte, 1024)
-	log.Println("Fetching peer information from server...")
+	if id == 0 {
+		data := make([]byte, 9)
+		_, _, err := conn.ReadFromUDP(data)
+		if err != nil {
+			return nil, err
+		}
+		if data[0] != OkayByte {
+			err = errors.New("Server response with bad status byte " + string(data[0]))
+			return nil, err
+		}
+		id = binary.LittleEndian.Uint64(data[1:])
+		log.Println("Server response with id: " + strconv.FormatUint(id, 10))
+	}
+	data := make([]byte, 64)
+	log.Println("Waiting for server to return peer information...")
 	n, _, err := conn.ReadFromUDP(data)
 	if err != nil {
 		return
@@ -51,16 +60,19 @@ func getPeerAddr(localAddr *net.UDPAddr, serverAddr *net.UDPAddr, id uint64) (pe
 	if err != nil {
 		return
 	}
-	peerAddr = parseAddr(string(data[:n]))
+	if data[0] != OkayByte {
+		err = errors.New("Server response with bad status byte " + string(data[0]))
+		return
+	}
+	peerAddr = parseAddr(string(data[1:n]))
 	return
 }
 
-func GetLocalAndPeerAddr(id uint64) (localAddr *net.UDPAddr, peerAddr *net.UDPAddr) {
+func GetLocalAndPeerAddr(id uint64) (localAddr *net.UDPAddr, peerAddr *net.UDPAddr, err error) {
 	serverAddrString := viper.GetString("server")
 	serverUrl, err := url.Parse(serverAddrString)
 	log.Printf("Server address is %s", serverAddrString)
 	if err != nil {
-		log.Println(err)
 		return
 	}
 	localPort := sendPort
@@ -70,13 +82,11 @@ func GetLocalAndPeerAddr(id uint64) (localAddr *net.UDPAddr, peerAddr *net.UDPAd
 	localAddr = &net.UDPAddr{IP: net.IPv4zero, Port: localPort}
 	serverOriginAddr, err := net.ResolveUDPAddr("udp", serverUrl.Host)
 	if err != nil {
-		log.Println(err)
 		return
 	}
 	serverAddr := &net.UDPAddr{IP: serverOriginAddr.IP, Port: serverPort}
 	peerAddr, err = getPeerAddr(localAddr, serverAddr, id)
 	if err != nil {
-		log.Println(err)
 		return
 	}
 	log.Printf("%s <---> %s\n", localAddr.String(), peerAddr.String())
@@ -84,12 +94,18 @@ func GetLocalAndPeerAddr(id uint64) (localAddr *net.UDPAddr, peerAddr *net.UDPAd
 }
 
 func P2PSendFileHandler(filenames []string) {
-	localAddr, peerAddr := GetLocalAndPeerAddr(0)
+	localAddr, peerAddr, err := GetLocalAndPeerAddr(0)
+	if err != nil {
+		log.Fatalf("Error: %v", err)
+	}
 	sendFile(localAddr, peerAddr, filenames[0])
 }
 
 func P2PRecvFileHandler(id uint64) {
-	localAddr, peerAddr := GetLocalAndPeerAddr(id)
+	localAddr, peerAddr, err := GetLocalAndPeerAddr(id)
+	if err != nil {
+		log.Fatalf("Error: %v", err)
+	}
 	recvFile(localAddr, peerAddr, "test.txt")
 }
 
@@ -123,7 +139,7 @@ func sendFile(srcAddr *net.UDPAddr, trgAddr *net.UDPAddr, filename string) {
 	if err != nil {
 		log.Println("Error send data: ", err)
 	}
-	log.Println(strconv.Itoa(n) + " Bytes data send")
+	log.Println("Sent " + strconv.Itoa(n) + " bytes data")
 }
 
 // TODO: fix this demo
@@ -153,7 +169,7 @@ func recvFile(srcAddr *net.UDPAddr, trgAddr *net.UDPAddr, filename string) {
 			log.Println("Error write file: ", err)
 			return
 		}
-		log.Println(strconv.Itoa(n) + " Bytes data wrote")
+		log.Println("Wrote " + strconv.Itoa(n) + " bytes data")
 		break
 	}
 }
