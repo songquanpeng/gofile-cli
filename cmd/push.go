@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"fmt"
 	"github.com/spf13/cobra"
+	"gofile-cli/common"
 )
 
 func init() {
@@ -15,9 +15,6 @@ var pushCmd = &cobra.Command{
 	Long:  `Push one or multi local files for others to pull`,
 	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Ready to push files:")
-		for i, s := range args {
-			fmt.Println("\t", i, s)
-		}
+		common.P2PSendFileHandler(args)
 	},
 }

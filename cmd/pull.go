@@ -1,8 +1,9 @@
 package cmd
 
 import (
-	"fmt"
 	"github.com/spf13/cobra"
+	"gofile-cli/common"
+	"strconv"
 )
 
 func init() {
@@ -15,6 +16,7 @@ var pullCmd = &cobra.Command{
 	Long:  `Pull one or multi files by id`,
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Pulling...")
+		id, _ := strconv.ParseInt(args[0], 10, 64)
+		common.P2PRecvFileHandler(uint64(id))
 	},
 }
