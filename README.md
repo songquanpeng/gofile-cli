@@ -18,7 +18,7 @@
 
 ## 功能
 1. [WIP] 命令行文件上传。
-2. [WIP] P2P 文件分享。
+2. P2P 文件分享。
 
 ## 截图展示
 TODO
@@ -26,7 +26,15 @@ TODO
 ## 使用方法
 [下载](https://github.com/songquanpeng/gofile-cli/releases/latest)可执行文件后，将其放到在 PATH 环境变量里的某个目录下。
 
-具体使用方法 TODO。
+```bash
+# 发送方：
+gofile-cli push ./path/to/file
+# 服务器会返回一个 id，如下：
+# 2022/09/18 21:18:30 Server response with id: 9908585559158765387
+
+# 接收方：
+gofile-cli pull 9908585559158765387
+```
 
 ## 打包流程
 ```bash
